@@ -1,5 +1,11 @@
 name: CI
-on: [push]
+on:
+  workflow_dispatch:
+    inputs:
+      PACKAGE:
+        description: ''
+        required: false
+        type: string
 jobs:
   build:
     runs-on: macos-latest
