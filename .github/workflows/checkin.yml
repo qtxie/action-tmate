@@ -10,7 +10,6 @@ jobs:
     - name: Setup SSH Debug Session
       run: |
         # 1. Start the native macOS OpenSSH server
-        sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist
 
         # 2. Inject your public key so Codex can authenticate cleanly 
         mkdir -p ~/.ssh
