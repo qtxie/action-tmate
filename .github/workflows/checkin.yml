@@ -1,17 +1,35 @@
-name: CI
-on:
-  workflow_dispatch:
-    inputs:
-      PACKAGE:
-        description: ''
-        required: false
-        type: string
+name: macOS
+
+on: [push]
+
 jobs:
-  build:
+  SSH-macOS:
     runs-on: macos-latest
+
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      with:
-        detached: true
+    - name: Setup SSH Debug Session
+      run: |
+        # 1. Start the native macOS OpenSSH server
+        sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist
+
+        # 2. Inject your public key so Codex can authenticate cleanly 
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PUBLIC_KEY }}" >> ~/.ssh/authorized_keys
+        chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys
+
+        # 3. Create a raw, anonymous TCP reverse tunnel via Pinggy
+        # This maps the runner's port 22 to a public address
+        ssh -p 443 -R 0:localhost:22 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 a.pinggy.io > pinggy.log 2>&1 &
+        ssh -p 443 -R 0:localhost:22 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 tcp@free.pinggy.io > pinggy.log 2>&1 &
+
+        # 4. Wait for the tunnel to establish and print the connection target
+        sleep 30
+        echo "=== CODEX CONNECTION TARGET ==="
+        grep -oE 'tcp://[a-zA-Z0-9.-]+:[0-9]+' pinggy.log || cat pinggy.log
+        echo "================================="
+
+        # 5. Keep runner alive non-interactively while Codex debugs
+        # Codex can run 'touch /tmp/keepalive' over SSH to terminate the job
+        while [ ! -f /tmp/keepalive ]; do
+          sleep 10
+        done
