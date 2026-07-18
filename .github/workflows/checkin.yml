@@ -28,9 +28,16 @@ jobs:
         ssh -p 443 -R 0:localhost:22 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 tcp@free.pinggy.io > pinggy.log 2>&1 &
 
         # 4. Wait for the tunnel to establish and print the connection target
-        sleep 30
-        echo "=== CODEX CONNECTION TARGET ==="
-        grep -oE 'tcp://[a-zA-Z0-9.-]+:[0-9]+' pinggy.log || cat pinggy.log
+        # Robust parsing: Extracts full tcp:// addresses OR standalone "Allocated port" blocks
+        if grep -q "tcp://" pinggy.log; then
+          grep -oE 'tcp://[a-zA-Z0-9.-]+:[0-9]+' pinggy.log
+        elif grep -q "Allocated port" pinggy.log; then
+          echo "Connect using the allocated port found in logs:"
+          grep -E "Allocated port|pinggy" pinggy.log
+        else
+          echo "Raw tunnel log output:"
+          cat pinggy.log
+        fi
         echo "================================="
 
         # 5. Keep runner alive non-interactively while Codex debugs
