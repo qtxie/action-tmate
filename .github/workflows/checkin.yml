@@ -33,10 +33,10 @@ jobs:
         if grep -q "tcp://" pinggy.log; then
           grep -oE 'tcp://[a-zA-Z0-9.-]+:[0-9]+' pinggy.log
         elif grep -q "Allocated port" pinggy.log; then
-          echo "Connect using the allocated port found in logs:"
-          grep -E "Allocated port|pinggy" pinggy.log
+          echo "Fallback details detected in logs:"
+          cat pinggy.log
         else
-          echo "Raw tunnel log output:"
+          echo "Full Raw Log Dump:"
           cat pinggy.log
         fi
         echo "================================="
