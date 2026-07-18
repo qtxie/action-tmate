@@ -1,6 +1,12 @@
 name: macOS
 
-on: [push]
+on:
+  workflow_dispatch:
+    inputs:
+      PACKAGE:
+        description: ''
+        required: false
+        type: string
 
 jobs:
   SSH-macOS:
