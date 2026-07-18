@@ -10,6 +10,12 @@ jobs:
     - name: Setup SSH Debug Session
       run: |
         # 1. Start the native macOS OpenSSH server
+        # Stop existing background sessions to prevent conflicts
+        sudo launchctl bootout system /System/Library/LaunchDaemons/ssh.plist 2>/dev/null || true
+        
+        # Load and kickstart the service properly using the modern domain system
+        sudo launchctl bootstrap system /System/Library/LaunchDaemons/ssh.plist 2>/dev/null || true
+        sudo launchctl kickstart -k system/com.openssh.sshd
 
         # 2. Inject your public key so Codex can authenticate cleanly 
         mkdir -p ~/.ssh
