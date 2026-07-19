@@ -32,19 +32,22 @@ jobs:
         echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_key
         chmod 600 ~/.ssh/vps_key
 
-        # 3. 创建专属 VNC 用户并启动远程管理（关闭 Legacy 模式）
+        # 3. 创建专属 VNC 用户并直接通过系统配置启用屏幕共享
         # 创建一个名为 vncuser 的新管理员，密码为你的 secrets.VNC_PASSWORD
         sudo sysadminctl -addUser vncuser -fullName "VNC Debug User" -password "${{ secrets.VNC_PASSWORD }}" -admin
         
-        # 激活远程管理
+        # 激活远程管理基础服务
         sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -on -restart -agent -privs -all
-        
-        # 【关键修改】关闭 vnclegacy 模式，改用 macOS 系统用户认证体系
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -clientopts -setvnclegacy no
-        
-        # 显式允许 vncuser 拥有全部远程控制权限
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -access -on -privs -all -users vncuser
 
+        # 【核心修复】直接向 macOS 系统配置写入权限，强制允许所有本地用户通过 VNC（系统账户模式）登录
+        sudo defaults write /Library/Preferences/com.apple.RemoteManagement.plist ScreenSharingAllowed -bool true
+        sudo defaults write /Library/Preferences/com.apple.RemoteManagement.plist VNCLegacyConnectionsEnabled -bool false
+        
+        # 针对当前全新系统（macOS 14+），同时对屏幕共享服务写入允许
+        sudo defaults write /Library/Preferences/com.apple.ScreenSharing.plist lines -array '{"authorizedPrincipalIdentifiers":[],"principalIdentifier":"group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000050","type":"Principal"}' 2>/dev/null || true
+
+        # 重启服务使配置生效
+        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -restart -agent
         # 4. Create Reverse SSH Tunnel to your VPS
         # This maps port 2222 on your VPS to port 22 on the macOS runner
         ssh -i ~/.ssh/vps_key -N -f -R 2222:localhost:22 -R 5900:localhost:5900 \
