@@ -32,15 +32,16 @@ jobs:
         echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_key
         chmod 600 ~/.ssh/vps_key
 
-        # 3. 修复密码并启动 VNC
-        CURRENT_USER=$(whoami)
+        # 3. 创建专属 VNC 用户并启动远程管理
+        # 创建一个名为 vncuser 的新管理员，密码为你的 secrets.VNC_PASSWORD
+        sudo sysadminctl -addUser vncuser -fullName "VNC Debug User" -password "${{ secrets.VNC_PASSWORD }}" -admin
         
-        # 使用 dscl 命令直接强制重置当前 runner 用户的密码，无需旧密码
-        sudo dscl . -passwd /Users/$CURRENT_USER "${{ secrets.VNC_PASSWORD }}"
-
         # 激活远程管理与屏幕共享
         sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -on -restart -agent -privs -all
         sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -clientopts -setvnclegacy -vnclegacy yes
+
+        # 确保新用户对远程管理有完全访问权限
+        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -access -on -privs -all -users vncuser
 
         # 4. Create Reverse SSH Tunnel to your VPS
         # This maps port 2222 on your VPS to port 22 on the macOS runner
