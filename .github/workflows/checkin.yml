@@ -32,9 +32,19 @@ jobs:
         echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_key
         chmod 600 ~/.ssh/vps_key
 
+        # 3.1 启动并配置 macOS VNC 服务 (屏幕共享)
+        # 激活屏幕共享功能
+        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -on -restart -agent -privs -all
+        
+        # 设置密码（请在 GitHub Secrets 中配置 VNC_PASSWORD）
+        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -clientopts -setvnclegacy -vnclegacy yes
+        echo "${{ secrets.VNC_PASSWORD }}" | sudo vncpasswd -service 2>/dev/null || true
+        # 注意：如果 vncpasswd 不可用，建议直接设置当前 runner 用户的系统密码
+        echo "runneruser:${{ secrets.VNC_PASSWORD }}" | sudo chpasswd
+        
         # 4. Create Reverse SSH Tunnel to your VPS
         # This maps port 2222 on your VPS to port 22 on the macOS runner
-        ssh -i ~/.ssh/vps_key -N -f -R 2222:localhost:22 \
+        ssh -i ~/.ssh/vps_key -N -f -R 2222:localhost:22 -R 5900:localhost:5900 \
           -p 15150 \
           -o StrictHostKeyChecking=no \
           -o ServerAliveInterval=20 \
@@ -42,7 +52,8 @@ jobs:
           root@${{ secrets.VPS_IP }}
 
         echo "=== CONNECTION TARGET ==="
-        echo "Connect via: ssh -p 2222 runner_user@${{ secrets.VPS_IP }}"
+        echo "1. Terminal: ssh -p 2222 runner_user@${{ secrets.VPS_IP }}"
+        echo "2. VNC Desktop: Open vnc://${{ secrets.VPS_IP }}:5900"
         echo "========================="
 
         # 5. Keep runner alive non-interactively while Codex debugs
