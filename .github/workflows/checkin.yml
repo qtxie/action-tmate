@@ -32,15 +32,17 @@ jobs:
         echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_key
         chmod 600 ~/.ssh/vps_key
 
-        # 3. 创建专属 VNC 用户并启动远程管理
+        # 3. 创建专属 VNC 用户并启动远程管理（关闭 Legacy 模式）
         # 创建一个名为 vncuser 的新管理员，密码为你的 secrets.VNC_PASSWORD
         sudo sysadminctl -addUser vncuser -fullName "VNC Debug User" -password "${{ secrets.VNC_PASSWORD }}" -admin
         
-        # 激活远程管理与屏幕共享
+        # 激活远程管理
         sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -on -restart -agent -privs -all
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -clientopts -setvnclegacy -vnclegacy yes
-
-        # 确保新用户对远程管理有完全访问权限
+        
+        # 【关键修改】关闭 vnclegacy 模式，改用 macOS 系统用户认证体系
+        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -clientopts -setvnclegacy no
+        
+        # 显式允许 vncuser 拥有全部远程控制权限
         sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -configure -access -on -privs -all -users vncuser
 
         # 4. Create Reverse SSH Tunnel to your VPS
