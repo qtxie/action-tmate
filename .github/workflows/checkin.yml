@@ -32,17 +32,17 @@ jobs:
         echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_key
         chmod 600 ~/.ssh/vps_key
 
-        # 3. 创建专属 VNC 用户并直接通过系统配置启用屏幕共享
-        # 创建一个名为 vncuser 的新管理员，密码为你的 secrets.VNC_PASSWORD
-        sudo sysadminctl -addUser vncuser -fullName "VNC Debug User" -password "${{ secrets.VNC_PASSWORD }}" -admin
-        
-        # 激活远程管理基础服务
-        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -on -restart -agent -privs -all
+        # Enable VNC (Apple Remote Desktop)
+        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -on -privs -all -restart -agent
 
-        # 【核心修复】直接向 macOS 系统配置写入权限，强制允许所有本地用户通过 VNC（系统账户模式）登录
-        sudo defaults write /Library/Preferences/com.apple.RemoteManagement.plist ScreenSharingAllowed -bool true
-        sudo defaults write /Library/Preferences/com.apple.RemoteManagement.plist VNCLegacyConnectionsEnabled -bool false
-        
+        # Set a VNC password (required)
+        echo "your_vnc_password" | \
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+          -configure -clientopts -setvnclegacy -vnclegacy yes
+
+        sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+          -configure -clientopts -setvncpw -vncpw your_vnc_password
+
         # 针对当前全新系统（macOS 14+），同时对屏幕共享服务写入允许
         sudo defaults write /Library/Preferences/com.apple.ScreenSharing.plist lines -array '{"authorizedPrincipalIdentifiers":[],"principalIdentifier":"group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000050","type":"Principal"}' 2>/dev/null || true
 
