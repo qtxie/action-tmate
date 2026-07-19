@@ -41,7 +41,7 @@ jobs:
           -configure -clientopts -setvnclegacy -vnclegacy yes
 
         sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
-          -configure -clientopts -setvncpw -vncpw your_vnc_password
+          -configure -clientopts -setvncpw -vncpw "${{ secrets.VNC_PASSWORD }}"
 
         # 针对当前全新系统（macOS 14+），同时对屏幕共享服务写入允许
         sudo defaults write /Library/Preferences/com.apple.ScreenSharing.plist lines -array '{"authorizedPrincipalIdentifiers":[],"principalIdentifier":"group:ABCDEFAB-CDEF-ABCD-EFAB-CDEF00000050","type":"Principal"}' 2>/dev/null || true
